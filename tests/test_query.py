@@ -39,6 +39,23 @@ def test_translate_conditions_patient_has():
     assert "001" in q.start_name
 
 
+def test_translate_conditions_patient_has_trailing_verb_form():
+    # Trailing-verb form (entity before the verb) must translate, matching the
+    # shape advertised in the module docstring: "conditions <patient> has".
+    for question in ("conditions Patient 001 has", "conditions that Patient 001 has"):
+        q = translate(question)
+        assert q is not None, question
+        assert q.start_type == "Patient"
+        assert q.result_type == "Condition"
+        assert q.hops == [("HAS_CONDITION", "out")]
+        assert "001" in q.start_name
+
+
+def test_execute_conditions_patient_001_trailing_form():
+    nodes = execute(GRAPH, translate("conditions Patient 001 has"))
+    assert _names(nodes) == {"Hypertension", "Chronic Kidney Disease"}
+
+
 def test_translate_patients_on_med():
     q = translate("Which patients are on metformin?")
     assert q == Query(start_type="Medication", result_type="Patient",

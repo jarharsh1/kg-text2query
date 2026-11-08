@@ -54,7 +54,18 @@ _rule(
     ),
 )
 
-# "conditions <patient> has", "diagnoses for <patient>", "what conditions does <patient> have"
+# Trailing-verb form: "conditions <patient> has", "conditions that <patient> have".
+# The entity sits BEFORE the verb here, so it needs its own rule (the rule below
+# only handles the trigger-before-entity form, e.g. "does <patient> have").
+_rule(
+    r"\b(?:conditions?|diagnoses|diagnosis)\b\s+(?:that\s+)?(?P<ent>.+?)\s+(?:has|have)\b\s*$",
+    lambda ent: Query(
+        start_type="Patient", start_name=ent, hops=[("HAS_CONDITION", "out")],
+        result_type="Condition",
+    ),
+)
+
+# "diagnoses for <patient>", "what conditions does <patient> have"
 _rule(
     r"\b(?:conditions?|diagnoses|diagnosis)\b.*?\b(?:does|for|of|has|have)\b\s+(?P<ent>.+?)\s*(?:have|has)?\s*$",
     lambda ent: Query(
