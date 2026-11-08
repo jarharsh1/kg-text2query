@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Text-to-Query Knowledge-Graph QA</title>
+  <style>
+    :root {
+      --bg: #0f172a; --panel: #1e293b; --accent: #a78bfa; --text: #e2e8f0;
+      --muted: #94a3b8; --border: #334155; --user: #8b5cf6; --code: #0b1220;
+      --ok: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg); color: var(--text); display: flex; flex-direction: column;
+      min-height: 100vh; }
+    header { padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 { font-size: 18px; margin: 0; }
+    .pill { font-size: 12px; color: var(--muted); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 999px; }
+    main { flex: 1; max-width: 860px; width: 100%; margin: 0 auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 14px; }
+    .chat { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .msg { padding: 12px 14px; border-radius: 12px; max-width: 90%; line-height: 1.5; }
+    .msg.user { align-self: flex-end; background: var(--user); color: #faf5ff; }
+    .msg.bot { align-self: flex-start; background: var(--panel);
+      border: 1px solid var(--border); width: 90%; }
+    .query { margin-top: 10px; border: 1px solid var(--accent); border-radius: 10px;
+      background: var(--code); }
+    .query summary { cursor: pointer; color: var(--accent); font-weight: 600;
+      padding: 8px 10px; list-style: none; }
+    .query summary::before { content: "🧩 "; }
+    .query[open] summary { border-bottom: 1px solid var(--border); }
+    .query pre { margin: 0; padding: 10px; font-size: 12px; overflow-x: auto;
+      color: #c7d2fe; white-space: pre-wrap; word-break: break-word; }
+    .results { margin-top: 8px; font-size: 13px; color: var(--muted); }
+    .results summary { cursor: pointer; color: var(--accent); }
+    .results li { margin: 2px 0; }
+    .nomatch { color: #fbbf24; }
+    form { display: flex; gap: 8px; }
+    input { flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--panel); color: var(--text); font-size: 15px; }
+    button { padding: 12px 18px; border: none; border-radius: 10px; background: var(--accent);
+      color: #1e1b4b; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+    .examples button { background: transparent; border: 1px solid var(--border);
+      color: var(--muted); font-weight: 400; font-size: 13px; }
+    .hint { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧩 Text→Query KG</h1>
+    <span class="pill" id="backend">backend: …</span>
+    <span class="pill" id="nodes">graph: …</span>
+  </header>
+  <main>
+    <p class="hint">Ask a question in plain English. The engine translates it into a
+      <strong>structured graph-query AST</strong> (think text-to-Cypher, but over an
+      in-memory property graph — no database), executes it, and shows you both the
+      answer <em>and the exact query it ran</em>. Example below: a clinical graph
+      (synthetic data) — swap in your own records to query any domain.</p>
+    <div class="examples" id="examples">
+      <button>Which medications treat hypertension?</button>
+      <button>Which patients are on metformin?</button>
+      <button>What conditions does Patient 001 have?</button>
+      <button>What did Dr. Rao prescribe?</button>
+    </div>
+    <div class="chat" id="chat"></div>
+    <form id="form">
+      <input id="q" placeholder="Ask about patients, conditions, medications…" autocomplete="off" />
+      <button id="send" type="submit">Ask</button>
+    </form>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
