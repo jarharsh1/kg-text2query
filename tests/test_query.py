@@ -114,3 +114,28 @@ def test_execute_no_match_entity_returns_empty():
     q = Query(start_type="Condition", result_type="Medication",
               start_name="nonexistent-condition", hops=[("TREATS", "in")])
     assert execute(GRAPH, q) == []
+
+
+# ---- pipeline `matched` resolution ---------------------------------------- #
+
+def test_pipeline_matched_resolves_to_real_node():
+    from gquery.core.pipeline import GraphQueryQA
+
+    qa = GraphQueryQA()
+    qa.load(DATA)
+    # A matched entity reports the resolved node name, not the raw phrase.
+    r = qa.ask("Which medications treat hypertension?")
+    assert r["matched"] == "Hypertension"
+    assert {x["name"] for x in r["results"]} == {"Lisinopril", "Amlodipine"}
+
+
+def test_pipeline_matched_is_none_when_entity_unmatched():
+    from gquery.core.pipeline import GraphQueryQA
+
+    qa = GraphQueryQA()
+    qa.load(DATA)
+    # The phrase translated into a query, but matched no start node -> matched
+    # must be None (not the echoed raw phrase) with empty results.
+    r = qa.ask("Which medications treat scurvy?")
+    assert r["matched"] is None
+    assert r["results"] == []

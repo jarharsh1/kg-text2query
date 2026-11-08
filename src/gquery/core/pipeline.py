@@ -16,7 +16,7 @@ from __future__ import annotations
 from gquery.core.backends import get_llm
 from gquery.core.graph import PropertyGraph
 from gquery.core.loader import build_graph
-from gquery.core.query import execute
+from gquery.core.query import execute, find_start_nodes
 from gquery.core.translate import translate
 
 
@@ -51,6 +51,12 @@ class GraphQueryQA:
                 "matched": None,
             }
 
+        # Resolve `matched` to the actual start node(s) the query matched, so it
+        # reports None when the extracted phrase matched no node (rather than
+        # echoing the raw phrase as if an entity had been found).
+        start_nodes = find_start_nodes(self.graph, query)
+        matched = _name(start_nodes[0]) if start_nodes else None
+
         nodes = execute(self.graph, query)
         results = [{"type": n.type, "name": _name(n)} for n in nodes]
         answer = self.llm.phrase(question, [r["name"] for r in results])
@@ -58,5 +64,5 @@ class GraphQueryQA:
             "answer": answer,
             "query": query.to_dict(),
             "results": results,
-            "matched": query.start_name,
+            "matched": matched,
         }
