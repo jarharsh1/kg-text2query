@@ -24,8 +24,9 @@ from pydantic import BaseModel, Field
 from gquery.core.backends import OllamaLLM
 from gquery.core.pipeline import GraphQueryQA
 
-# Locate the bundled web UI (repo-root/web), resilient to the CWD.
-_WEB_DIR = Path(__file__).resolve().parents[3] / "web"
+# Locate bundled files (repo-root/web, repo-root/data), resilient to the CWD.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_WEB_DIR = _REPO_ROOT / "web"
 
 app = FastAPI(
     title="Text-to-Query Knowledge-Graph QA",
@@ -39,7 +40,7 @@ app = FastAPI(
 _pipeline = GraphQueryQA()
 
 # Load the bundled synthetic dataset at startup if present.
-_SAMPLE = Path("data/clinical.json")
+_SAMPLE = _REPO_ROOT / "data" / "clinical.json"
 if _SAMPLE.exists():
     try:
         _pipeline.load(json.loads(_SAMPLE.read_text(encoding="utf-8")))

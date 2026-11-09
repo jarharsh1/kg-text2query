@@ -2,9 +2,17 @@
 
 from fastapi.testclient import TestClient
 
+from gquery.api import main as api_main
 from gquery.api.main import app
 
 client = TestClient(app)
+
+
+def test_sample_path_is_cwd_independent():
+    # The bundled dataset path must resolve from the package location, not the
+    # current working directory, so startup load works regardless of CWD.
+    assert api_main._SAMPLE.is_absolute()
+    assert api_main._SAMPLE.exists()
 
 
 def test_health_offline():
