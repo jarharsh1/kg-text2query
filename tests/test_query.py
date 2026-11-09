@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from gquery.core.loader import build_graph
-from gquery.core.query import Query, execute
+from gquery.core.query import Query, execute, find_start_nodes
 from gquery.core.translate import translate
 
 DATA = json.loads(Path("data/clinical.json").read_text(encoding="utf-8"))
@@ -139,3 +139,49 @@ def test_pipeline_matched_is_none_when_entity_unmatched():
     r = qa.ask("Which medications treat scurvy?")
     assert r["matched"] is None
     assert r["results"] == []
+
+
+# ---- robust entity resolution (qualified / multi-word phrases) ------------ #
+
+def test_execute_qualified_phrase_resolves_by_reverse_containment():
+    # A trailing qualifier on the entity must not break resolution: the node
+    # name "Hypertension" is found inside the captured phrase.
+    q = translate("medications that treat hypertension in elderly", GRAPH)
+    assert q is not None
+    assert _names(execute(GRAPH, q)) == {"Lisinopril", "Amlodipine"}
+
+
+def test_execute_qualified_phrase_more_words():
+    q = translate("what drugs treat hypertension in elderly patients", GRAPH)
+    assert q is not None
+    assert _names(execute(GRAPH, q)) == {"Lisinopril", "Amlodipine"}
+
+
+def test_execute_or_phrase_unions_both_medications():
+    # "X or Y" should resolve both start nodes and union the traversals.
+    q = translate("who takes metformin or lisinopril", GRAPH)
+    assert q is not None
+    assert _names(execute(GRAPH, q)) == {"Patient 001", "Patient 002"}
+
+
+def test_who_takes_single_medication_still_resolves():
+    q = translate("who takes metformin", GRAPH)
+    assert q is not None
+    assert _names(execute(GRAPH, q)) == {"Patient 002"}
+
+
+def test_short_node_name_does_not_match_inside_unrelated_word():
+    # Reverse containment is word-bounded, so a short id/name can't match inside
+    # an unrelated longer word. (Smoke test that boundary matching holds.)
+    from gquery.core.query import _contains_word
+
+    assert _contains_word("hypertension in elderly", "hypertension")
+    assert not _contains_word("hypertensionitis", "hypertension")
+
+
+def test_translate_prefers_rule_whose_entity_resolves():
+    # With a graph, translate should not return a query whose entity resolves to
+    # nothing when it can avoid it. A clear medication question still resolves.
+    q = translate("who takes lisinopril", GRAPH)
+    assert q is not None
+    assert find_start_nodes(GRAPH, q)

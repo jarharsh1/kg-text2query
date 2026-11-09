@@ -26,7 +26,8 @@ from __future__ import annotations
 
 import re
 
-from gquery.core.query import Query
+from gquery.core.graph import PropertyGraph
+from gquery.core.query import Query, find_start_nodes
 
 # A rule is (compiled-pattern, entity-group-name, Query-builder taking the entity).
 # Patterns are tried in order; the first match wins. Each pattern captures the
@@ -118,9 +119,17 @@ def _clean(entity: str) -> str:
     return ent
 
 
-def translate(question: str) -> Query | None:
-    """Translate ``question`` into a :class:`Query`, or ``None`` if nothing matches."""
+def translate(question: str, graph: PropertyGraph | None = None) -> Query | None:
+    """Translate ``question`` into a :class:`Query`, or ``None`` if nothing matches.
+
+    When ``graph`` is given, prefer the first rule whose cleaned entity actually
+    resolves to at least one start node in the graph. This avoids returning a
+    query that is structurally valid but whose entity matches nothing (e.g. a
+    broad "on" phrasing capturing a non-medication). Without a graph, the first
+    rule whose entity is non-empty wins (the original behavior).
+    """
     text = question.strip()
+    first: Query | None = None
     for pattern, builder in _RULES:
         m = pattern.search(text)
         if not m:
@@ -128,5 +137,11 @@ def translate(question: str) -> Query | None:
         entity = _clean(m.group("ent"))
         if not entity:
             continue
-        return builder(entity)  # type: ignore[operator]
-    return None
+        query: Query = builder(entity)  # type: ignore[operator]
+        if graph is None:
+            return query
+        if find_start_nodes(graph, query):
+            return query
+        if first is None:
+            first = query  # remember the first structural match as a fallback
+    return first

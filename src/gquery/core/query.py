@@ -18,6 +18,7 @@ the same executor runs queries over any property graph.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from gquery.core.graph import Node, PropertyGraph
@@ -42,14 +43,41 @@ class Query:
         }
 
 
-def _matches_name(node: Node, needle: str) -> bool:
-    """Case-insensitive substring match against the node's name or id."""
+def _contains_word(haystack: str, needle: str) -> bool:
+    """True if ``needle`` appears in ``haystack`` on word boundaries (case-insensitive).
+
+    Used so a short node name/id can't match inside an unrelated word.
+    """
+    if not needle:
+        return False
+    return re.search(rf"(?<!\w){re.escape(needle.lower())}(?!\w)", haystack.lower()) is not None
+
+
+def _matches_name(node: Node, phrase: str) -> bool:
+    """Match a node against the captured ``phrase``.
+
+    Resolves by *reverse containment*: the node's name (or id) must appear, on
+    word boundaries, inside the captured phrase. This makes qualified/multi-word
+    questions robust — e.g. the phrase "hypertension in elderly" still resolves
+    to the node "Hypertension", and "metformin and lisinopril" resolves to both
+    medication nodes. The phrase-in-name direction is also kept so a partial
+    entity typed by the user (e.g. "diabetes") still matches "Type 2 Diabetes".
+    """
     name = str(node.attrs.get("name", node.id))
-    return needle.lower() in name.lower() or needle.lower() in node.id.lower()
+    phrase_l = phrase.lower()
+    # Reverse containment (node name/id appears in the phrase, word-bounded).
+    if _contains_word(phrase_l, name) or _contains_word(phrase_l, node.id):
+        return True
+    # Forward containment (phrase is a partial of the node name/id).
+    return phrase_l in name.lower() or phrase_l in node.id.lower()
 
 
 def find_start_nodes(graph: PropertyGraph, query: Query) -> list[Node]:
-    """Nodes of ``start_type`` matching ``start_name`` (all of the type if None)."""
+    """Nodes of ``start_type`` matching ``start_name`` (all of the type if None).
+
+    Multiple nodes of the start type may match (e.g. an "X or Y" question), and
+    all are returned; the executor unions their traversals.
+    """
     nodes = graph.nodes_of_type(query.start_type)
     if query.start_name:
         nodes = [n for n in nodes if _matches_name(n, query.start_name)]

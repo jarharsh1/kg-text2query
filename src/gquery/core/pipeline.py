@@ -40,7 +40,7 @@ class GraphQueryQA:
             return {"answer": "The knowledge graph is empty.", "query": None,
                     "results": [], "matched": None}
 
-        query = translate(question)
+        query = translate(question, self.graph)
         if query is None:
             return {
                 "answer": "No structured query could be formed from that question. "
